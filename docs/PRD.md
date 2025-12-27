@@ -10,7 +10,8 @@ A 2D top-down simulation game with a Pokémon-style pixel art aesthetic that all
 
 ## 3. Key Logistics Features
 - **Slotting Coordinate System**: Unique identifiers for every rack position.
-- **Inventory Management**: Character carries a limited number of items.
+- **Inventory & Stock Management**: Character carries a limited number of items; racks have specific quantities and item types.
+- **Dynamic Task Generation**: Randomized Picking and Inbound tasks based on real-time stock levels.
 - **Accuracy Tracking**: Verification of picked items against the order list.
 
 ## 4. Success Metrics

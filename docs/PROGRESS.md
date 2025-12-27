@@ -20,8 +20,15 @@
   - Receiving Dock interaction and visual feedback.
   - Automatic mode switching (Pick-to-Ship -> Put Away -> Pick-to-Ship).
 
+- **Phase 6: Simulation Complexity (2025-12-27)**
+  - Slot quantity and item type attributes added to racks.
+  - Randomized Picking/Inbound task generation based on rack stock.
+  - Real-time UI updates for rack stock labels.
+  - Fixed UI reset bug (replaced scene restart with targeted label updates).
+
 ## 📊 Current State
-- Core Pick-to-Ship and Put-Away cycles are fully implemented and functional.
+- Core Pick-to-Ship and Put-Away cycles are fully implemented with dynamic stock management and randomization.
+- UI provides real-time feedback on rack quantities.
 
 ## 🚀 Upcoming Roadmap
 - Integrating professional pixel art assets.
