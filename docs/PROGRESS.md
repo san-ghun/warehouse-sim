@@ -58,7 +58,22 @@
 - Integrating professional pixel art assets.
 - Adding sound effects and background music.
 - Multiple levels and layout randomization.
+  - more complex warehouse layouts.
+  - more complex rack layouts.
 - Advanced logistics features (e.g., fragile items, battery management).
+  - fragile items make the player control more carefully.
+  - battery management makes the player to charge the battery.
+  - heavy items make the player move slower.
+  - weight limit makes the player to avoid heavy items.
+- Hard mode.
+  - no visual target sparkles.
+  - shorter time limit.
 - Result data storage and analysis.
   - Posthog integration for analytics.
   - Database to record user performance and behavior.
+- Algorithmic challenges.
+  - code the warehouse layout generator.
+  - code the rack layout generator.
+  - code the task generator.
+  - code the player path finder.
+  - code the automated picker AI.
