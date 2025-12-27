@@ -15,10 +15,13 @@
   - Pokémon-style dialogue system.
   - Visual target sparkles.
   - Shipping zone and final completion flow.
+- **Phase 5: Inbound Workflow (2025-12-27)**
+  - Inbound mode (Put Away) logic and task generation.
+  - Receiving Dock interaction and visual feedback.
+  - Automatic mode switching (Pick-to-Ship -> Put Away -> Pick-to-Ship).
 
 ## 📊 Current State
-- All core MVP features are implemented and functional.
-- The game supports a full "Pick-to-Ship" cycle.
+- Core Pick-to-Ship and Put-Away cycles are fully implemented and functional.
 
 ## 🚀 Upcoming Roadmap
 - Integrating professional pixel art assets.
