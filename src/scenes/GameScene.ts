@@ -16,6 +16,12 @@ export class GameScene extends Phaser.Scene {
     private shippingZone!: Phaser.GameObjects.Rectangle;
     private receivingZone!: Phaser.GameObjects.Rectangle;
     private rackLabels: Map<string, Phaser.GameObjects.Text> = new Map();
+    private timerText!: Phaser.GameObjects.Text;
+    private scoreHUDText!: Phaser.GameObjects.Text;
+    private timeLeft: number = 0;
+    private timerEvent?: Phaser.Time.TimerEvent;
+    private gameStarted: boolean = false;
+    private startOverlay?: Phaser.GameObjects.Container;
     private readonly speed = 160;
     private readonly tileSize = 32;
     private readonly shippingZonePos = { x: 21, y: 0, width: 4, height: 4 };
@@ -114,6 +120,135 @@ export class GameScene extends Phaser.Scene {
 
         this.updateOrderDisplay();
         this.showDialogue("Welcome to the Warehouse! \nFollow the Pick List on the right.");
+
+        // HUD: Timer and Score
+        this.timerText = this.add.text(810, 500, 'Time: 00:00', { fontSize: '18px', color: '#ff0000', fontStyle: 'bold' });
+        this.scoreHUDText = this.add.text(810, 530, 'Score: 0', { fontSize: '18px', color: '#ffffff' });
+
+        this.createStartOverlay();
+    }
+
+    private createStartOverlay() {
+        const bg = this.add.rectangle(400, 300, 400, 200, 0x000000, 0.8).setOrigin(0.5);
+        const text = this.add.text(400, 300, 'WAREHOUSE SIM\n\nPRESS SPACE TO START', {
+            fontSize: '28px',
+            color: '#fff',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        this.startOverlay = this.add.container(0, 0, [bg, text]).setDepth(500);
+
+        this.interactKey.once('down', () => {
+            this.startOverlay?.destroy();
+            this.gameStarted = true;
+            this.startNewRound();
+        });
+    }
+
+    private startNewRound() {
+        this.warehouseManager.startRound();
+        const state = this.warehouseManager.getRoundState();
+        if (state) {
+            this.timeLeft = state.config.timeLimit;
+            this.updateTimerHUD();
+
+            if (this.timerEvent) this.timerEvent.destroy();
+            this.timerEvent = this.time.addEvent({
+                delay: 1000,
+                callback: this.onTimerTick,
+                callbackScope: this,
+                loop: true
+            });
+        }
+        this.resetPlayerPosition();
+        this.updateOrderDisplay();
+        this.updateRackVisuals();
+    }
+
+    private resetPlayerPosition() {
+        this.player.setPosition(400, 300);
+        this.clearFollowers();
+    }
+
+    private onTimerTick() {
+        if (this.timeLeft > 0) {
+            this.timeLeft--;
+            this.updateTimerHUD();
+        } else {
+            this.endRound();
+        }
+    }
+
+    private updateTimerHUD() {
+        const mins = Math.floor(this.timeLeft / 60);
+        const secs = this.timeLeft % 60;
+        this.timerText.setText(`Time: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+    }
+
+    private endRound() {
+        if (this.timerEvent) this.timerEvent.destroy();
+        this.player.setVelocity(0);
+
+        const state = this.warehouseManager.getRoundState();
+        if (state) {
+            const timeBonus = state.isFinished ? this.warehouseManager.calculateTimeBonus(this.timeLeft) : 0;
+            const totalScore = state.score + timeBonus;
+
+            const message = state.isFinished ?
+                `Round Complete!\nBase Score: ${state.score}\nTime Bonus: ${timeBonus}\nTotal: ${totalScore}` :
+                `Time Up!\nFinal Score: ${state.score}`;
+
+            this.showRoundSummary(message);
+        }
+    }
+
+    private showRoundSummary(message: string) {
+        this.showDialogue(message, false);
+
+        // Add a temporary "Choice" text
+        const choiceText = this.add.text(400, 300, 'PRESS [R] TO REPLAY\nPRESS [N] FOR NEW ROUND', {
+            fontSize: '24px',
+            color: '#fff',
+            backgroundColor: '#000',
+            padding: { x: 20, y: 15 },
+            align: 'center'
+        }).setOrigin(0.5).setDepth(300);
+
+        const restartKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+        const nextKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.N);
+
+        restartKey?.once('down', () => {
+            choiceText.destroy();
+            this.dialogueContainer.setVisible(false);
+            this.warehouseManager.restartRound();
+            this.resetPlayerPosition();
+            this.resumeGameAfterChoice();
+        });
+
+        nextKey?.once('down', () => {
+            choiceText.destroy();
+            this.dialogueContainer.setVisible(false);
+            this.startNewRound();
+        });
+    }
+
+    private resumeGameAfterChoice() {
+        const state = this.warehouseManager.getRoundState();
+        if (state) {
+            this.timeLeft = state.config.timeLimit;
+            this.updateTimerHUD();
+            this.updateOrderDisplay();
+            this.updateRackVisuals();
+            this.clearFollowers();
+
+            if (this.timerEvent) this.timerEvent.destroy();
+            this.timerEvent = this.time.addEvent({
+                delay: 1000,
+                callback: this.onTimerTick,
+                callbackScope: this,
+                loop: true
+            });
+        }
     }
 
     private createDialogueUI() {
@@ -137,14 +272,21 @@ export class GameScene extends Phaser.Scene {
         this.dialogueContainer.setDepth(100);
     }
 
-    private showDialogue(message: string) {
+    private showDialogue(message: string, autoHide: boolean = true) {
         this.dialogueText.setText(message);
         this.dialogueContainer.setVisible(true);
+        this.dialogueContainer.setDepth(200);
 
-        // Auto-hide after 3 seconds
-        this.time.delayedCall(3000, () => {
-            this.dialogueContainer.setVisible(false);
-        });
+        // Auto-hide after 3 seconds if requested
+        if (autoHide) {
+            this.time.delayedCall(3000, () => {
+                // Only hide if we are not at the end of a round
+                const state = this.warehouseManager.getRoundState();
+                if (!state?.isFinished && this.timeLeft > 0) {
+                    this.dialogueContainer.setVisible(false);
+                }
+            });
+        }
     }
 
     private updateOrderDisplay() {
@@ -206,6 +348,14 @@ export class GameScene extends Phaser.Scene {
             this.orderText.setText(text);
             this.orderText.setColor('#3498db');
         }
+
+        const state = this.warehouseManager.getRoundState();
+        if (state) {
+            this.scoreHUDText.setText(`Score: ${state.score}`);
+            if (state.isFinished) {
+                this.endRound();
+            }
+        }
     }
 
     private createSparkle(x: number, y: number) {
@@ -223,7 +373,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     update() {
-        if (!this.player || !this.cursors) return;
+        if (!this.player || !this.cursors || !this.gameStarted) return;
+
+        const state = this.warehouseManager.getRoundState();
+        if (state?.isFinished || this.timeLeft <= 0) {
+            this.player.setVelocity(0);
+            return;
+        }
 
         this.player.setVelocity(0);
 

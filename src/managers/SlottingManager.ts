@@ -11,6 +11,7 @@ export interface Slot {
 export class SlottingManager {
     private slots: Map<string, Slot> = new Map();
     private readonly itemTypes = ['Red Box', 'Blue Box', 'Green Box', 'Yellow Box'];
+    private stockSnapshot: Map<string, { itemType?: string, quantity: number }> = new Map();
 
     constructor() {
         this.initializeMockSlots();
@@ -104,5 +105,25 @@ export class SlottingManager {
             slot.itemType = undefined;
         }
         return true;
+    }
+
+    snapshotStock() {
+        this.stockSnapshot.clear();
+        this.slots.forEach((slot, id) => {
+            this.stockSnapshot.set(id, {
+                itemType: slot.itemType,
+                quantity: slot.quantity
+            });
+        });
+    }
+
+    restoreStock() {
+        this.stockSnapshot.forEach((snapshot, id) => {
+            const slot = this.slots.get(id);
+            if (slot) {
+                slot.itemType = snapshot.itemType;
+                slot.quantity = snapshot.quantity;
+            }
+        });
     }
 }

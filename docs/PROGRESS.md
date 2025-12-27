@@ -31,6 +31,18 @@
   - Relocated Status HUD and Pick List HUD to the sidebar to prevent visual overlap with the shipping zone.
   - Optimized text word wrapping for sidebar display.
 
+- **Phase 8: Round System (2025-12-27)**
+  - Implemented round-based gameplay with random phase sequences and shortened/randomized time limits (15-45s per phase).
+  - Added a countdown timer and score tracking to the sidebar.
+  - Integrated performance-based scoring (tasks + time bonus).
+  - Enhanced UI with a persistent round-end summary and interactive choices:
+    - Replay Current Round ('R') with warehouse state and player position restoration.
+    - Start New Round ('N') with fresh randomization and player position reset.
+
+- **Phase 9: Game Start Trigger (2025-12-27)**
+  - Added a manual game start mechanism (SPACE key) with a dedicated overlay.
+  - Disabled player control and game logic until the trigger is activated.
+
 ## 📊 Current State
 - Core Pick-to-Ship and Put-Away cycles are fully implemented with dynamic stock management and randomization.
 - UI provides real-time feedback on rack quantities.

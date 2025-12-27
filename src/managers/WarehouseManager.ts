@@ -29,17 +29,72 @@ export interface InboundTask {
     isCompleted: boolean;
 }
 
+export interface RoundConfig {
+    id: string;
+    phases: GameModeType[];
+    timeLimit: number; // in seconds
+}
+
+export interface RoundState {
+    config: RoundConfig;
+    currentPhaseIndex: number;
+    score: number;
+    isFinished: boolean;
+}
+
 export class WarehouseManager {
+    private slottingManager: SlottingManager;
     private currentOrder: Order | null = null;
     private currentInboundTasks: InboundTask[] = [];
     private inventory: string[] = [];
     private readonly maxInventory = 3;
     private mode: GameModeType = GameMode.PICKING;
-    private slottingManager: SlottingManager;
+    private roundState: RoundState | null = null;
 
     constructor(slottingManager: SlottingManager) {
         this.slottingManager = slottingManager;
-        this.generateNewOrder();
+    }
+
+    startRound(config?: RoundConfig) {
+        if (!config) {
+            // Generate a random round
+            const numPhases = Math.floor(Math.random() * 3) + 2; // 2 to 4 phases
+            const phases: GameModeType[] = [];
+            for (let i = 0; i < numPhases; i++) {
+                phases.push(i % 2 === 0 ? GameMode.PICKING : GameMode.INBOUND);
+            }
+            config = {
+                id: `RND-${Math.floor(Math.random() * 1000)}`,
+                phases,
+                timeLimit: numPhases * (Math.floor(Math.random() * 31) + 15) // 15 to 45 seconds per phase
+            };
+        }
+
+        this.roundState = {
+            config,
+            currentPhaseIndex: 0,
+            score: 0,
+            isFinished: false
+        };
+
+        this.inventory = [];
+        this.slottingManager.snapshotStock();
+        this.initPhase();
+    }
+
+    private initPhase() {
+        if (!this.roundState) return;
+        const mode = this.roundState.config.phases[this.roundState.currentPhaseIndex];
+        this.mode = mode;
+        if (mode === GameMode.INBOUND) {
+            this.generateInboundTasks();
+        } else {
+            this.generateNewOrder();
+        }
+    }
+
+    getRoundState(): RoundState | null {
+        return this.roundState;
     }
 
     getMode(): GameModeType {
@@ -156,6 +211,10 @@ export class WarehouseManager {
                 if (index > -1) {
                     this.inventory.splice(index, 1);
                 }
+                this.addScore(50); // Points for put away
+                if (this.allInboundCompleted()) {
+                    this.completePhase();
+                }
                 return true;
             }
         }
@@ -191,6 +250,8 @@ export class WarehouseManager {
         if (this.currentOrder && this.currentOrder.status === 'PACKING') {
             this.currentOrder.status = 'SHIPPED';
             this.clearInventory();
+            this.addScore(100); // Points for order completion
+            this.completePhase();
             return true;
         }
         return false;
@@ -198,5 +259,36 @@ export class WarehouseManager {
 
     allInboundCompleted(): boolean {
         return this.currentInboundTasks.length > 0 && this.currentInboundTasks.every(t => t.isCompleted);
+    }
+
+    private addScore(points: number) {
+        if (this.roundState) {
+            this.roundState.score += points;
+        }
+    }
+
+    private completePhase() {
+        if (!this.roundState) return;
+
+        this.roundState.currentPhaseIndex++;
+        if (this.roundState.currentPhaseIndex < this.roundState.config.phases.length) {
+            this.initPhase();
+        } else {
+            this.roundState.isFinished = true;
+        }
+    }
+
+    calculateTimeBonus(remainingTime: number): number {
+        return Math.floor(remainingTime * 10);
+    }
+
+    restartRound() {
+        if (!this.roundState) return;
+        this.roundState.currentPhaseIndex = 0;
+        this.roundState.score = 0;
+        this.roundState.isFinished = false;
+        this.inventory = [];
+        this.slottingManager.restoreStock();
+        this.initPhase();
     }
 }
