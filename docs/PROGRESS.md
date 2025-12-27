@@ -59,3 +59,6 @@
 - Adding sound effects and background music.
 - Multiple levels and layout randomization.
 - Advanced logistics features (e.g., fragile items, battery management).
+- Result data storage and analysis.
+  - Posthog integration for analytics.
+  - Database to record user performance and behavior.
